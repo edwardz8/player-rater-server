@@ -12,13 +12,15 @@ app.use(express.json())
 // get all players
 app.get("/api/v1/players", async (req, res) => {
     try {
-        const results = await db.query('select * from players')
-        console.log(results)
+        // const results = await db.query('select * from players')
+        const playerRatingsData = await db.query(
+            "select * from players left join (select player_id, COUNT(*), TRUNC(AVG(rating), 1) as average_rating from reviews group by player_id) reviews on players.id = reviews.player_id;"
+          );
         res.status(200).json({
         status: "success",
-        results: results.rows.length,
+        results: playerRatingsData.rows.length,
         data: {
-            players: results.rows,
+            players: playerRatingsData.rows,
         }
     })
     } catch (err) {
@@ -30,9 +32,13 @@ app.get("/api/v1/players", async (req, res) => {
 app.get("/api/v1/players/:id", async (req, res) => {
     // console.log(req.params.id)
     try {
-        const player = await db.query(
+        /* const player = await db.query(
             'select * from players where id = $1', [req.params.id]
-        )
+        ) */
+        const player = await db.query(
+            "select * from players left join (select player_id, COUNT(*), TRUNC(AVG(rating),1) as average_rating from reviews group by player_id) reviews on players.id = reviews.player_id where id = $1",
+            [req.params.id]
+          );
 
         const reviews = await db.query(
             'select * from reviews where player_id = $1', [req.params.id]
@@ -54,8 +60,8 @@ app.get("/api/v1/players/:id", async (req, res) => {
 app.post("/api/v1/players", async (req, res) => {
     // console.log(req.body)
     try {
-        const results = await db.query('INSERT INTO players (name, team, price_range, country) values ($1, $2, $3, $4)', 
-        [req.body.name, req.body.team, req.body.price_range, req.body.country] )
+        const results = await db.query('INSERT INTO players (name, team, price_range, goals, assists, points, shots, toi) values ($1, $2, $3, $4, $5, $6, $7, $8)', 
+        [req.body.name, req.body.team, req.body.price_range, req.body.goals, req.body.assists, req.body.points, req.body.shots, req.body.toi] )
 
         res.status(201).json({
             status: "success",
@@ -72,8 +78,8 @@ app.put("/api/v1/players/:id", async (req, res) => {
     // console.log(req.params.id)
     // console.log(req.body)
     try {
-        const results = await db.query('UPDATE players SET name = $1, team = $2, price_range = $3, country = $4 where id = $5 returning *', 
-            [req.body.name, req.body.team, req.body.price_range, req.params.country, req.params.id]
+        const results = await db.query('UPDATE players SET name = $1, team = $2, price_range = $3, goals = $4, assists = $5, points = $6, shots = $7, toi = $8, injured = $9 where id = $10 returning *', 
+            [req.body.name, req.body.team, req.body.price_range, req.params.goals, req.params.assists, req.params.points, req.params.shots, req.params.toi, req.params.injured, req.params.id]
         )
 
         res.status(200).json({
